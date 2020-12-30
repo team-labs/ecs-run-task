@@ -181,7 +181,8 @@ func (r *Runner) Run(ctx context.Context) error {
 						"Container %s exited with",
 						containerId,
 					)
-					if strings.HasPrefix(*ev.Message, finishedPrefix) {
+					log.Printf("Count: %d", count)
+					if strings.HasPrefix(*ev.Message, finishedPrefix) || count >= 75 {
 						log.Printf("Found container finished message for %s: %s",
 							containerId, *ev.Message)
 						return false

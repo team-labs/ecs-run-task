@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -18,6 +19,8 @@ const (
 	defaultLogTimeout      = time.Minute * 60
 	defaultLogPollInterval = time.Second * 2
 )
+
+var count int64
 
 type cloudwatchLogsInterface interface {
 	DescribeLogStreamsPages(input *cloudwatchlogs.DescribeLogStreamsInput,
@@ -190,9 +193,14 @@ func (lw *logWatcher) Stop() error {
 
 // printEventsAfter prints events from a given stream after a given timestamp
 func (lw *logWatcher) printEventsAfter(ctx context.Context, ts int64) (int64, error) {
-	log.Printf("Printing events in stream %q after %d", lw.LogStreamName, ts)
+	log.Printf("Printing events in stream %q after %d (%d)", lw.LogStreamName, ts, count)
+	count++
+	if count >= 60 {
+		log.Printf("Returning because count limit reached")
+		os.Exit(0)
+	}
 	t := time.Now()
-	var count int64
+	//var count int64
 
 	filterInput := &cloudwatchlogs.FilterLogEventsInput{
 		LogGroupName:   aws.String(lw.LogGroupName),
@@ -203,7 +211,7 @@ func (lw *logWatcher) printEventsAfter(ctx context.Context, ts int64) (int64, er
 	err := lw.CloudWatchLogs.FilterLogEventsPages(filterInput,
 		func(p *cloudwatchlogs.FilterLogEventsOutput, lastPage bool) (shouldContinue bool) {
 			for _, event := range p.Events {
-				count++
+				//count++
 				if !lw.Printer(event) {
 					log.Printf("Stopping log watcher via print function")
 					lw.Stop()
